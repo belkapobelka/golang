@@ -22,7 +22,7 @@ type Article struct {
 
 var Articles []Article
 
-func main(){
+func main() {
 	Articles = []Article{
 		{
 			Id:      "1",
@@ -43,7 +43,7 @@ func main(){
 	myRouter := mux.NewRouter().StrictSlash(true)
 
 	myRouter.HandleFunc("/articles", getAllArticles).Methods("GET")
-	myRouter.HandleFunc("/article/{id}",getArticleById).Methods("GET")
+	myRouter.HandleFunc("/article/{id}", getArticleById).Methods("GET")
 
 	myRouter.HandleFunc("/article", addNewArticle).Methods("POST")
 
@@ -51,7 +51,7 @@ func main(){
 
 	myRouter.HandleFunc("/article/{id}", updateArticleById).Methods("PUT")
 
-	log.Fatal(http.ListenAndServe(":8000",myRouter))
+	log.Fatal(http.ListenAndServe(":8000", myRouter))
 }
 
 func updateArticleById(w http.ResponseWriter, r *http.Request) {
@@ -59,14 +59,16 @@ func updateArticleById(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	for index, article := range Articles {
-		if article.Id == vars["id"]{
+		if article.Id == vars["id"] {
 			reqBody, _ := ioutil.ReadAll(r.Body)
 			json.Unmarshal(reqBody, &Articles[index])
 			json.NewEncoder(w).Encode(Articles[index])
+			w.WriteHeader(http.StatusAccepted)
 			return
 		}
 	}
 
+	w.WriteHeader(http.StatusNotFound)
 	err := Error{Message: "Статья с указанным id не найдена."}
 	json.NewEncoder(w).Encode(err)
 }
@@ -75,31 +77,51 @@ func deleteArticleById(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Hint: deleteArticleById worked ...")
 
 	vars := mux.Vars(r)
+	flag := false
+
 	for index, article := range Articles {
 		if article.Id == vars["id"] {
+			flag = true
 			Articles = append(Articles[:index], Articles[index+1:]...)
+			w.WriteHeader(http.StatusAccepted)
 		}
+	}
+
+	if !flag {
+		w.WriteHeader(http.StatusNotFound)
+		err := Error{Message: "Статья с указанным id не найдена."}
+		json.NewEncoder(w).Encode(err)
 	}
 }
 
 func addNewArticle(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Hint: addNewArticle worked ...")
 
-	reqBody,_:=ioutil.ReadAll(r.Body)
+	reqBody, _ := ioutil.ReadAll(r.Body)
 	var article Article
-	json.Unmarshal(reqBody,&article)
+	json.Unmarshal(reqBody, &article)
 
 	Articles = append(Articles, article)
+	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(article)
 }
 
 func getArticleById(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Hint: getArticleById worked ...")
-	vars:=mux.Vars(r)
-	for _,article:=range Articles{
-		if article.Id == vars["id"]{
+	vars := mux.Vars(r)
+	find := false
+
+	for _, article := range Articles {
+		if article.Id == vars["id"] {
+			find = true
 			json.NewEncoder(w).Encode(article)
 		}
+	}
+
+	if !find {
+		w.WriteHeader(http.StatusNotFound)
+		err := Error{Message: "Статья с указанным id не найдена."}
+		json.NewEncoder(w).Encode(err)
 	}
 }
 
