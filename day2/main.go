@@ -62,8 +62,8 @@ func updateArticleById(w http.ResponseWriter, r *http.Request) {
 		if article.Id == vars["id"] {
 			reqBody, _ := ioutil.ReadAll(r.Body)
 			json.Unmarshal(reqBody, &Articles[index])
-			json.NewEncoder(w).Encode(Articles[index])
 			w.WriteHeader(http.StatusAccepted)
+			json.NewEncoder(w).Encode(Articles[index])
 			return
 		}
 	}
