@@ -7,46 +7,46 @@
 	},
 	"item": [
 		{
-			"name": "Request /articles",
+			"name": "getAllItems",
 			"request": {
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "http://localhost:8000/articles",
+					"raw": "http://localhost:8000/items",
 					"protocol": "http",
 					"host": [
 						"localhost"
 					],
 					"port": "8000",
 					"path": [
-						"articles"
+						"items"
 					]
 				}
 			},
 			"response": []
 		},
 		{
-			"name": "Request /article/{1}",
+			"name": "getItemById",
 			"request": {
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "http://localhost:8000/article/2",
+					"raw": "http://localhost:8000/item/11",
 					"protocol": "http",
 					"host": [
 						"localhost"
 					],
 					"port": "8000",
 					"path": [
-						"article",
-						"2"
+						"item",
+						"11"
 					]
 				}
 			},
 			"response": []
 		},
 		{
-			"name": "addNewArticle",
+			"name": "addNewItem",
 			"request": {
 				"method": "POST",
 				"header": [
@@ -75,7 +75,7 @@
 			"response": []
 		},
 		{
-			"name": "addNewArticle Copy",
+			"name": "deleteItemById",
 			"request": {
 				"method": "DELETE",
 				"header": [
@@ -87,14 +87,14 @@
 					}
 				],
 				"url": {
-					"raw": "http://localhost:8000/article/3",
+					"raw": "http://localhost:8000/item/3",
 					"protocol": "http",
 					"host": [
 						"localhost"
 					],
 					"port": "8000",
 					"path": [
-						"article",
+						"item",
 						"3"
 					]
 				}
@@ -102,7 +102,7 @@
 			"response": []
 		},
 		{
-			"name": "addNewArticle Copy 2",
+			"name": "updateItemById",
 			"request": {
 				"method": "PUT",
 				"header": [
@@ -114,18 +114,18 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\"Id\":\"4\",\"Title\":\"Test3\",\"Author\":\"Test3\",\"Content\":\"Test3\"}"
+					"raw": "\t{\r\n\t\t\t\"Id\":     4,\r\n\t\t\t\"Item\":   \"Item 4\",\r\n\t\t\t\"Amount\": 44,\r\n\t\t\t\"Price\":  \"444.44\"\r\n\t\t}"
 				},
 				"url": {
-					"raw": "http://localhost:8000/article/5",
+					"raw": "http://localhost:8000/item/2",
 					"protocol": "http",
 					"host": [
 						"localhost"
 					],
 					"port": "8000",
 					"path": [
-						"article",
-						"5"
+						"item",
+						"2"
 					]
 				}
 			},
