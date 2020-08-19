@@ -24,27 +24,6 @@ type Item struct {
 var Items []Item
 
 func main() {
-	Items = []Item{
-		{
-			Id:     1,
-			Item:   "Item 1",
-			Amount: 11,
-			Price:  "111.11",
-		},
-		{
-			Id:     2,
-			Item:   "Item 2",
-			Amount: 22,
-			Price:  "222.22",
-		},
-		{
-			Id:     3,
-			Item:   "Item 3",
-			Amount: 33,
-			Price:  "333.33",
-		},
-	}
-
 	fmt.Println("API was started")
 
 	myRouter := mux.NewRouter().StrictSlash(true)

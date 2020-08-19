@@ -1,0 +1,136 @@
+{
+	"info": {
+		"_postman_id": "7cff61f1-c7ae-437b-b2ad-97ebe9c9cd9f",
+		"name": "Items",
+		"description": "123",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Request /articles",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/articles",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"articles"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Request /article/{1}",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/article/2",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"article",
+						"2"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "addNewArticle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "\t{\r\n\t\t\t\"Id\":     4,\r\n\t\t\t\"Item\":   \"Item 4\",\r\n\t\t\t\"Amount\": 44,\r\n\t\t\t\"Price\":  \"444.44\"\r\n\t\t}"
+				},
+				"url": {
+					"raw": "http://localhost:8000/item",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"item"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "addNewArticle Copy",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "app",
+						"type": "text",
+						"disabled": true
+					}
+				],
+				"url": {
+					"raw": "http://localhost:8000/article/3",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"article",
+						"3"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "addNewArticle Copy 2",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"Id\":\"4\",\"Title\":\"Test3\",\"Author\":\"Test3\",\"Content\":\"Test3\"}"
+				},
+				"url": {
+					"raw": "http://localhost:8000/article/5",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"article",
+						"5"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"protocolProfileBehavior": {}
+}
