@@ -1,17 +1,38 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
+	_ "github.com/lib/pq"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
 )
 
+type Config struct {
+	User     string
+	Password string
+	DBName   string
+	SSLMode  string
+}
+
+var config = Config{
+	User:     "guest",
+	Password: "guest",
+	DBName:   "store",
+	SSLMode:  "disable",
+}
+var connStr = fmt.Sprintf("user=%v password=%v database=%v sslmode=%v", config.User, config.Password, config.DBName, config.SSLMode)
+
 type Error struct {
 	Message string `json:"Error"`
+}
+
+type Info struct {
+	Info string `json:"Info"`
 }
 
 type Item struct {
@@ -21,37 +42,58 @@ type Item struct {
 	Price  string `json:"price"`
 }
 
-var Items []Item
-
 func main() {
 	fmt.Println("API was started")
 
 	myRouter := mux.NewRouter().StrictSlash(true)
 
-	myRouter.HandleFunc("/items", getAllItems).Methods("GET")
-	myRouter.HandleFunc("/item/{id}", getItemById).Methods("GET")
+	myRouter.HandleFunc("/items", GetAllItems).Methods("GET")
+	myRouter.HandleFunc("/item/{id}", GetItemById).Methods("GET")
 
-	myRouter.HandleFunc("/item", addNewItem).Methods("POST")
+	myRouter.HandleFunc("/item", AddNewItem).Methods("POST")
 
-	myRouter.HandleFunc("/item/{id}", updateItemById).Methods("PUT")
+	myRouter.HandleFunc("/item/{id}", UpdateItemById).Methods("PUT")
 
-	myRouter.HandleFunc("/item/{id}", deleteItemById).Methods("DELETE")
+	myRouter.HandleFunc("/item/{id}", DeleteItemById).Methods("DELETE")
 
 	log.Fatal(http.ListenAndServe(":8000", myRouter))
 
 }
 
-func getAllItems(writer http.ResponseWriter, request *http.Request) {
-	if len(Items) != 0 {
-		json.NewEncoder(writer).Encode(Items)
-	} else {
-		err := Error{Message: "No one item exists"}
+func GetAllItems(writer http.ResponseWriter, request *http.Request) {
+	items := selectAll()
+	if len(items) < 1 {
 		writer.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(writer).Encode(err)
+		json.NewEncoder(writer).Encode(Error{Message: "No one items found in DB"})
+	} else {
+		json.NewEncoder(writer).Encode(items)
 	}
 }
 
-func getItemById(writer http.ResponseWriter, request *http.Request) {
+func selectAll() []Item {
+	db := ConnectToDb()
+	defer db.Close()
+	rows, err := db.Query("SELECT * FROM items")
+	if err != nil {
+		log.Fatalf("Ошибка выполнения запроса %v", err)
+	}
+	defer rows.Close()
+
+	var allItems []Item
+	for rows.Next() {
+		item := Item{}
+		err = rows.Scan(&item.Id, &item.Amount, &item.Price, &item.Item)
+		if err != nil {
+			fmt.Printf("Что-то пошло не так при чтении строки %v", err)
+			continue
+		}
+		allItems = append(allItems, item)
+	}
+
+	return allItems
+}
+
+func GetItemById(writer http.ResponseWriter, request *http.Request) {
 	vars := mux.Vars(request)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
@@ -60,64 +102,107 @@ func getItemById(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	for _, item := range Items {
-		if item.Id == id {
-			json.NewEncoder(writer).Encode(item)
-			return
-		}
+	item := getItemFromDb(id)
+	if item != nil {
+		json.NewEncoder(writer).Encode(item)
+	} else {
+		writer.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(writer).Encode(Error{Message: "This item doesn't exist"})
 	}
-
-	writer.WriteHeader(http.StatusNotFound)
-	json.NewEncoder(writer).Encode(Error{Message: "This item doesn't exist"})
 }
 
-func addNewItem(writer http.ResponseWriter, request *http.Request) {
+func getItemFromDb(id int) *Item {
+	db := ConnectToDb()
+	defer db.Close()
+
+	var item Item
+	err := db.QueryRow("SELECT * FROM items WHERE id = $1", id).Scan(&item.Id, &item.Amount, &item.Price, &item.Item)
+	if err != nil {
+		fmt.Printf("Возникла ошибка при выполнении запроса %v\r\n", err)
+		return nil
+	}
+	return &item
+}
+
+func AddNewItem(writer http.ResponseWriter, request *http.Request) {
 	var item Item
 	reqBody, _ := ioutil.ReadAll(request.Body)
 	json.Unmarshal(reqBody, &item)
-	Items = append(Items, item)
-	writer.WriteHeader(http.StatusCreated)
+
+	db := ConnectToDb()
+	defer db.Close()
+
+	var newId int
+	err := db.QueryRow("INSERT INTO items(amount, price, item) VALUES ($1,$2,$3) RETURNING id", item.Amount, item.Price, item.Item).Scan(&newId)
+	if err != nil {
+		fmt.Printf("Возникла ошибка при выполнении запроса %v\r\n", err)
+		writer.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(writer).Encode(Error{Message: "Не удалось внести элемент в справочник."})
+	} else {
+		writer.WriteHeader(http.StatusCreated)
+		json.NewEncoder(writer).Encode(Info{Info: fmt.Sprintf("Успешно создан элемент с id = %v", newId)})
+	}
 }
 
-func updateItemById(writer http.ResponseWriter, request *http.Request) {
+func UpdateItemById(writer http.ResponseWriter, request *http.Request) {
 	vars := mux.Vars(request)
+	var item Item
 	reqBody, _ := ioutil.ReadAll(request.Body)
-	id, err := strconv.Atoi(vars["id"])
-	if err != nil {
+	json.Unmarshal(reqBody, &item)
+	id, _ := strconv.Atoi(vars["id"])
+
+	if updateItemById(id, item) {
+		writer.WriteHeader(http.StatusAccepted)
+	} else {
 		writer.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(writer).Encode(Error{Message: "Couldn't convert string to int"})
-		return
 	}
-
-	for index, item := range Items {
-		if item.Id == id {
-			json.Unmarshal(reqBody, &Items[index])
-			writer.WriteHeader(http.StatusAccepted)
-			return
-		}
-	}
-
-	writer.WriteHeader(http.StatusNotFound)
-	json.NewEncoder(writer).Encode(Error{Message: "Item with this id doesn't exist"})
 }
 
-func deleteItemById(writer http.ResponseWriter, request *http.Request) {
-	vars := mux.Vars(request)
-	id, err := strconv.Atoi(vars["id"])
+func updateItemById(id int, item Item) bool {
+	db := ConnectToDb()
+	defer db.Close()
+
+	rows, err := db.Exec("UPDATE items SET amount=$1, price=$2, item=$3 WHERE id=$4", item.Amount, item.Price, item.Item, id)
 	if err != nil {
+		fmt.Printf("Возникла ошибка при выполнении запроса %v\r\n", err)
+		return false
+	}
+	if val, _ := rows.RowsAffected(); val == 0 {
+		fmt.Println("Нет такого id")
+		return false
+	}
+	return true
+}
+
+func DeleteItemById(writer http.ResponseWriter, request *http.Request) {
+	idStr := mux.Vars(request)["id"]
+	id, _ := strconv.Atoi(idStr)
+	if deleteItemFromDb(id) {
+		writer.WriteHeader(http.StatusAccepted)
+	} else {
 		writer.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(writer).Encode(Error{Message: "Couldn't convert string to int"})
-		return
+	}
+}
+
+func deleteItemFromDb(id int) bool {
+	db := ConnectToDb()
+	defer db.Close()
+	res, err := db.Exec("DELETE FROM items WHERE id=$1", id)
+	if err != nil {
+		log.Fatalf("Ошибка даления записи по id %v", err)
 	}
 
-	for index, item := range Items {
-		if item.Id == id {
-			Items = append(Items[:index], Items[index+1:]...)
-			writer.WriteHeader(http.StatusAccepted)
-			return
-		}
+	if val, _ := res.RowsAffected(); val == 0 {
+		fmt.Println("Нет такого id")
+		return false
 	}
+	return true
+}
 
-	writer.WriteHeader(http.StatusNotFound)
-	json.NewEncoder(writer).Encode(Error{Message: "Item with this id doesn't exist"})
+func ConnectToDb() *sql.DB {
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		log.Fatalf("Что-то не подключилось %v", err)
+	}
+	return db
 }
