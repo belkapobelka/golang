@@ -189,7 +189,8 @@ func deleteItemFromDb(id int) bool {
 	defer db.Close()
 	res, err := db.Exec("DELETE FROM items WHERE id=$1", id)
 	if err != nil {
-		log.Fatalf("Ошибка даления записи по id %v", err)
+		fmt.Printf("Возникла ошибка при выполнении запроса %v\r\n", err)
+		return false
 	}
 
 	if val, _ := res.RowsAffected(); val == 0 {
