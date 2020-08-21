@@ -1,11 +1,13 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	jwtmiddlware "github.com/auth0/go-jwt-middleware"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
+	_ "github.com/lib/pq"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -46,8 +48,6 @@ type User struct {
 
 var Articles = []Article{{1, "First"}}
 
-var Users = []User{{1, "Bob", "1234"}}
-
 var SecretKey = []byte("secret") // == apiKey
 
 func main() {
@@ -69,9 +69,24 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 	reqBody, _ := ioutil.ReadAll(r.Body)
 	var user User
 	json.Unmarshal(reqBody, &user)
+
+	InsertUser(user)
+
 	w.WriteHeader(http.StatusCreated)
-	Users = append(Users, user)
-	w.Write([]byte("You can /auth now!"))
+	w.Write([]byte("Registration OK"))
+}
+
+func InsertUser(user User) {
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	_, err = db.Exec("INSERT INTO Users (login,password) VALUES ($1,$2)", user.Login, user.Password)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func PostToken(w http.ResponseWriter, r *http.Request) {
@@ -79,6 +94,7 @@ func PostToken(w http.ResponseWriter, r *http.Request) {
 	var user User
 	json.Unmarshal(reqBody, &user)
 
+	Users := SelectAll()
 	for _, u := range Users {
 		if u.Login == user.Login && u.Password == user.Password {
 			token := jwt.New(jwt.SigningMethodHS256)
@@ -99,6 +115,31 @@ func PostToken(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(401)
 	w.Write([]byte("You are not in User Database"))
+}
+
+func SelectAll() []User {
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	rows, err := db.Query("SELECT * FROM Users")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var Users []User
+	for rows.Next() {
+		u := User{}
+		err := rows.Scan(&u.Id, &u.Login, &u.Password)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		Users = append(Users, u)
+	}
+	return Users
 }
 
 var jwtMiddleware = jwtmiddlware.New(jwtmiddlware.Options{
