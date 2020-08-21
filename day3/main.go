@@ -37,7 +37,7 @@ type Info struct {
 
 type Item struct {
 	Id     int    `json:"id"`
-	Item   string `json:"item"`
+	Title  string `json:"title"`
 	Amount int    `json:"amount"`
 	Price  string `json:"price"`
 }
@@ -82,9 +82,9 @@ func selectAll() []Item {
 	var allItems []Item
 	for rows.Next() {
 		item := Item{}
-		err = rows.Scan(&item.Id, &item.Amount, &item.Price, &item.Item)
+		err = rows.Scan(&item.Id, &item.Amount, &item.Price, &item.Title)
 		if err != nil {
-			fmt.Printf("Что-то пошло не так при чтении строки %v", err)
+			fmt.Printf("Что-то пошло не так при чтении строки с результатом %v\r\n", err)
 			continue
 		}
 		allItems = append(allItems, item)
@@ -116,7 +116,7 @@ func getItemFromDb(id int) *Item {
 	defer db.Close()
 
 	var item Item
-	err := db.QueryRow("SELECT * FROM items WHERE id = $1", id).Scan(&item.Id, &item.Amount, &item.Price, &item.Item)
+	err := db.QueryRow("SELECT * FROM items WHERE id = $1", id).Scan(&item.Id, &item.Amount, &item.Price, &item.Title)
 	if err != nil {
 		fmt.Printf("Возникла ошибка при выполнении запроса %v\r\n", err)
 		return nil
@@ -133,7 +133,7 @@ func AddNewItem(writer http.ResponseWriter, request *http.Request) {
 	defer db.Close()
 
 	var newId int
-	err := db.QueryRow("INSERT INTO items(amount, price, item) VALUES ($1,$2,$3) RETURNING id", item.Amount, item.Price, item.Item).Scan(&newId)
+	err := db.QueryRow("INSERT INTO items(amount, price, title) VALUES ($1,$2,$3) RETURNING id", item.Amount, item.Price, item.Title).Scan(&newId)
 	if err != nil {
 		fmt.Printf("Возникла ошибка при выполнении запроса %v\r\n", err)
 		writer.WriteHeader(http.StatusNotFound)
@@ -162,7 +162,7 @@ func updateItemById(id int, item Item) bool {
 	db := ConnectToDb()
 	defer db.Close()
 
-	rows, err := db.Exec("UPDATE items SET amount=$1, price=$2, item=$3 WHERE id=$4", item.Amount, item.Price, item.Item, id)
+	rows, err := db.Exec("UPDATE items SET amount=$1, price=$2, title=$3 WHERE id=$4", item.Amount, item.Price, item.Title, id)
 	if err != nil {
 		fmt.Printf("Возникла ошибка при выполнении запроса %v\r\n", err)
 		return false
